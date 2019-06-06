@@ -176,7 +176,7 @@ bool Session::readHeaders() {
 
     if(buf.find("200 OK") != 8) { // length of "HTTP/1.1 "
       std::cout << "HTTP status is not 200" << std::endl;
-      std::cout << buf << std::endl;
+      std::cout << buf.substr(0, headers_len) << std::endl;
       return false;
     }
 
