@@ -24,7 +24,8 @@ int main(int argc, char **argv)
       return -1;
     }
     Session session;
-    session.init(uri.host(), uri.port());
+    if(!session.init(uri.host(), uri.port()))
+      return -1;
 
     // prepare path
     string path(uri.path());

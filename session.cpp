@@ -100,6 +100,10 @@ bool Session::init(const std::string& aHost, unsigned short aPort) {
     return false;
   }
 
+  /*
+   * check connection state but working no stable
+   * TODO
+
   int so_error;
   socklen_t len;
   getsockopt(mSock, SOL_SOCKET, SO_ERROR, &so_error, &len);
@@ -107,6 +111,7 @@ bool Session::init(const std::string& aHost, unsigned short aPort) {
     std::cout << "Connection can`t established. Exiting!" << std::endl;
     return false;
   }
+  */
 
   return true;
 }
