@@ -128,7 +128,6 @@ void Session::sendRequest(const std::string& aHost, uint16_t aPort,
   size_t size_left = req.size();
   while (size_left > 0) {
     if ((size_send = send(mSock, buf, size_left, 0)) == -1) {
-      std::cout << "send error: " << std::endl;
       throw "Write error. Exiting!";
     }
     size_left -= size_send;
@@ -174,7 +173,7 @@ bool Session::readHeaders() {
       return false;
     }
 
-    if(buf.find("200 OK") != 8) { // length of "HTTP/1.1 "
+    if(buf.find("200 OK") != 9) { // length of "HTTP/1.1 "
       std::cout << "HTTP status is not 200" << std::endl;
       std::cout << buf.substr(0, headers_len) << std::endl;
       return false;
