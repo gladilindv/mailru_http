@@ -4,6 +4,7 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <chrono>
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -12,6 +13,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <cassert>
+#include <cstring>
 
 namespace util {
 struct in_addr inaddr(const std::string& aHost) {
@@ -54,16 +58,17 @@ bool isSocketCloseError(int error) {
 }
 }  // namespace util
 
-Session::Session(const std::string& aHost, unsigned short aPort) {
+
+bool Session::init(const std::string& aHost, unsigned short aPort) {
   struct sockaddr_in address {0};
 
   if (!(mSock = socket(AF_INET, SOCK_STREAM, 0))) {
-    std::cout << "socket" << std::endl;
-    throw "Failed to create a socket. Exiting!";
+    std::cout << "Failed to create a socket. Exiting!"<< std::endl;
+    return false;
   }
   if (setNonBlocking(true) == -1) {
-    std::cout << "fcntl" << std::endl;
-    throw "Failed to set async mode. Exiting!";
+    std::cout << "Failed to set async mode. Exiting!" << std::endl;
+    return false;
   }
 
   address.sin_family = AF_INET;
@@ -71,7 +76,10 @@ Session::Session(const std::string& aHost, unsigned short aPort) {
   address.sin_addr = util::inaddr(aHost);
 
   if (connect(mSock, (struct sockaddr*)&address, sizeof(address)) < 0) {
-    if (errno != EINPROGRESS) throw "Failed to connect. Exiting!";
+    if (errno != EINPROGRESS) {
+      std::cout << "Failed to connect. Exiting!" << std::endl;
+      return false;
+    }
   }
 
   fd_set fdset;
@@ -84,21 +92,23 @@ Session::Session(const std::string& aHost, unsigned short aPort) {
 
   auto rc = select(mSock + 1, nullptr, &fdset, nullptr, &timeout);
   if (rc == -1) {
-    std::cout << "select: " << errno << std::endl;
-    throw "Failed to select. Exiting!";
+    std::cout << "Failed to select. Exiting!" << std::endl;
+    return false;
   }
   if (rc == 0) {
-    std::cout << "connection timeout" << std::endl;
-    throw "Timeout. Exiting!";
+    std::cout << "Timeout. Exiting!" << std::endl;
+    return false;
   }
 
   int so_error;
   socklen_t len;
   getsockopt(mSock, SOL_SOCKET, SO_ERROR, &so_error, &len);
   if (so_error != 0) {
-    std::cout << "NOT connected: " << rc << std::endl;
-    throw "connection error. Exiting!";
+    std::cout << "Connection can`t established. Exiting!" << std::endl;
+    return false;
   }
+
+  return true;
 }
 
 Session::~Session() { ::close(mSock); }
@@ -127,7 +137,6 @@ void Session::sendRequest(const std::string& aHost, uint16_t aPort,
 }
 
 void Session::readAndSave(const std::string& aName) {
-  // setNonBlocking(false);
   if (readHeaders()) 
     saveFile(aName);
 }
@@ -165,16 +174,22 @@ bool Session::readHeaders() {
       return false;
     }
 
+    if(buf.find("200 OK") != 8) { // length of "HTTP/1.1 "
+      std::cout << "HTTP status is not 200" << std::endl;
+      std::cout << buf << std::endl;
+      return false;
+    }
+
     break;
   }
   
   return true;
 }
 
-bool Session::saveFile(const std::string& aName) {
+void Session::saveFile(const std::string& aName) {
   std::ofstream outfile(aName, std::ofstream::binary);
 
-  std::vector<char> buffer(16 * 1024);  // 16 KiB
+  std::vector<char> buffer(16 * 1024);
   unsigned total{0};
   
   // track time
@@ -212,6 +227,7 @@ bool Session::saveFile(const std::string& aName) {
 
   outfile.close();
 
+  // debug stat
   int cnt = 0;
   while(total > 1024){
     total /= 1024.0;
@@ -219,6 +235,5 @@ bool Session::saveFile(const std::string& aName) {
   }
   std::vector<std::string> dim {"Bytes", "KB", "MB", "GB", "TB", "PB"};
   std::cout << "TOTAL: " << std::to_string(total) << dim[cnt] << std::endl;
-
-  return true;
+  // debug stat
 }

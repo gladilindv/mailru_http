@@ -1,6 +1,8 @@
 #include "uri.h"
 
 #include <iostream>
+#include <algorithm>
+#include <string_view>
 
 void Uri::parse(const std::string& uri) {
   auto it = uri.begin();

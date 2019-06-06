@@ -18,15 +18,16 @@ class Session {
   }
 
  public:
-  explicit Session(const std::string& aHost, unsigned short aPort);
+  Session() = default;
   ~Session();
 
+  bool init(const std::string& aHost, unsigned short aPort);
   void sendRequest(const std::string& aHost, uint16_t aPort,
                    const std::string& aPath);
   void readAndSave(const std::string&);
 
  private:
   bool readHeaders();
-  bool saveFile(const std::string&);
+  void saveFile(const std::string&);
 
 };
